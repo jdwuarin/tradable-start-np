@@ -1,0 +1,7 @@
+Plugin-Version: 1.0
+Plugin-Type: tradable_app
+Plugin-ClassPath: ${classpath}
+Plugin-Vendor-Id: com.tradable
+Plugin-SymbolicName: com.tradable.HtCreateNewPosition
+Plugin-Name: How-to create a new position
+Plugin-Vendor: tradable
