@@ -21,18 +21,20 @@ import com.tradable.api.services.executor.TradingRequestListener;
 import com.tradable.api.services.executor.TradingResponse;
 
 public class HtCreateNewPosition extends JPanel implements WorkspaceModule, TradingRequestListener{
+
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	private static final String TITLE = "Create a new Position";
 
 	private static final Logger logger = LoggerFactory.getLogger(HtCreateNewPosition.class);
 
-	private TradingRequestExecutor executor;
+	private TradingRequestExecutor _executor;
 
 	private int commandIdSeed;
-
-	@Autowired
-	public void setExecutor(TradingRequestExecutor executor) {
-		this.executor = executor;		
-	}	
 	
 	
 	
@@ -41,38 +43,42 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule, Trad
 		setLayout(null);
 		setSize(250, 250);
 		
+		_executor = executor;
+		
 	}
 	
-	
-	  public void placeMarketOrder(Integer accountId, Instrument instrument, OrderSide orderSide, OrderDuration orderDuration, Double quantity) {
-	      PlaceOrderActionBuilder orderActionBuilder = new PlaceOrderActionBuilder();
-	      orderActionBuilder.setInstrument(instrument);
-	      orderActionBuilder.setOrderSide(orderSide);
-	      orderActionBuilder.setDuration(orderDuration);
-	      orderActionBuilder.setOrderType(OrderType.MARKET);
-	      orderActionBuilder.setQuantity(quantity);
+	public void placeMarketOrder(Integer accountId, Instrument instrument, OrderSide orderSide, OrderDuration orderDuration, Double quantity) {
+		
+		PlaceOrderActionBuilder orderActionBuilder = new PlaceOrderActionBuilder();
+		orderActionBuilder.setInstrument(instrument);
+		orderActionBuilder.setOrderSide(orderSide);
+		orderActionBuilder.setDuration(orderDuration);
+		orderActionBuilder.setOrderType(OrderType.MARKET);
+		orderActionBuilder.setQuantity(quantity);
 
-	      OrderAction orderAction = orderActionBuilder.build();
+		OrderAction orderAction = orderActionBuilder.build();
 
-	      OrderActionRequest request = new OrderActionRequest(++commandIdSeed, accountId, orderAction);
+		OrderActionRequest request = new OrderActionRequest(++commandIdSeed, accountId, orderAction);
 
-	      logger.info("Executing command: {}", commandIdSeed);
+		logger.info("Executing command: {}", commandIdSeed);
 
-	      try {
-	          executor.execute(request, this);
-	      } catch (RuntimeException ex) {
-	          logger.error("Failed to submit command: {}", commandIdSeed, ex);
-	      }
-	  }
+		try {
+			_executor.execute(request, this);
+		} catch (RuntimeException ex) {
+			logger.error("Failed to submit command: {}", commandIdSeed, ex);
+			}	
+	}	
 
-	  @Override
-	  public void requestExecuted(TradingRequestExecutor executor, TradingRequest request, TradingResponse response) {
-	      if (response.isSuccess()) {
-	          logger.info("Command is successfully executed: {}", request.getId());
-	      } else {
-	          logger.error("Command is failed to execute: {}", request.getId(), response.getCause());
-	      }
-	  }
+
+	@Override
+	public void requestExecuted(TradingRequestExecutor executor, TradingRequest request, TradingResponse response) {
+		if (response.isSuccess())
+			logger.info("Command is successfully executed: {}", request.getId());
+		
+		else 
+			logger.error("Command is failed to execute: {}", request.getId(), response.getCause());
+		
+	}
 	 
 
 

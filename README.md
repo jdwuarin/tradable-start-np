@@ -27,10 +27,10 @@ Cloning and opening the project in Eclipse
 2. Now That you are all setup and that you have made sure that you have setup your eclipse platform to develop tradable apps as per [this](http://link.to.be.provided) link. Let's import the project to Eclipse.
  * Open up your Shell (or git Shell) then navigate to your Eclipse Workspace using:   
 
-             $ cd path/to/your/worksapce
+            $ cd path/to/your/worksapce
  * Then clone the git repository using:
 
-            $ git clone  https://github.com/john-dwuarin/tradable-start-np.git [name_of_firectory_to_copy_to]
+            $ git clone https://github.com/john-dwuarin/tradable-start-np.git [name_of_firectory_to_copy_to]
  * Once the directory is cloned in your Worskpace, you will probably want to remove the origin remote from your local repo, as you probably will not want to be linked to this repository as no actual work is done on it:
 
             $ git remote rm origin
@@ -40,7 +40,5 @@ Cloning and opening the project in Eclipse
 
 3. You can now go about renaming the project and the classes by right clicking on them and refractor -> rename. You should also update the JRE System Library the project uses by right-clicking on JRE System Library and using the latest version available. You will have to edit the *src/main/resources/META-INF/MANIFEST.MF* and the *src/main/resources/META-INF/spring/app-context.xml* files as per the link mentioned in point 2. to reflect your project's and/or your company 's name.**But most importantly, you will have to edit the *pom.xml* file (preferably using the xml view of Eclipse) and change the GroupId and ArtifactId values.** Remember that the GroupId dvalue should be an inverse .com notation and should reflect the name of the entity you are doing the project for and ArtifactId is quite simply the name of your project.   
 
-How this app was Written:
-========================= 
-Part one: Sending a market order
----------------------------------
+
+Open up the Howto page to find out how this page was written.

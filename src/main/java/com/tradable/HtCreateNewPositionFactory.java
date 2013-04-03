@@ -12,6 +12,11 @@ public class HtCreateNewPositionFactory implements WorkspaceModuleFactory{
 	@Autowired
 	private TradingRequestExecutor executor;  //create a trading request executor in 
 	
+	@Autowired
+	public void setExecutor(TradingRequestExecutor executor) {
+		this.executor = executor;		
+	}	
+	
 	/**
 	 * @param args
 	 */
