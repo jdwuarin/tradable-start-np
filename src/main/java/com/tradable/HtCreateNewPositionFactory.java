@@ -5,12 +5,20 @@ import org.springframework.beans.factory.annotation.Autowired;
 import com.tradable.api.component.WorkspaceModule;
 import com.tradable.api.component.WorkspaceModuleCategory;
 import com.tradable.api.component.WorkspaceModuleFactory;
+import com.tradable.api.services.account.CurrentAccountService;
 import com.tradable.api.services.executor.TradingRequestExecutor;
+import com.tradable.api.services.instrument.InstrumentService;
 
 public class HtCreateNewPositionFactory implements WorkspaceModuleFactory{
 
 	@Autowired
 	private TradingRequestExecutor executor;  //create a trading request executor in 
+	
+	@Autowired
+	CurrentAccountService accountSubscriptionService;
+	
+	@Autowired
+	InstrumentService instrumentService;
 	
 	@Autowired
 	public void setExecutor(TradingRequestExecutor executor) {
@@ -28,7 +36,7 @@ public class HtCreateNewPositionFactory implements WorkspaceModuleFactory{
 	@Override
 	public WorkspaceModule createModule() {
 		// TODO Auto-generated method stub
-		return new HtCreateNewPosition(executor);
+		return new HtCreateNewPosition(executor, accountSubscriptionService, instrumentService);
 	}
 
 	@Override

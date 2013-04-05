@@ -9,5 +9,5 @@ http://www.springframework.org/schema/util http://www.springframework.org/schema
 
 	<context:annotation-config></context:annotation-config>
 	<bean id="com_tradable_HtCreateNewPosition"
-		class="com.tradable.HtCreateNewPosition"/>
+		class="com.tradable.HtCreateNewPositionFactory"/>
 </beans>
