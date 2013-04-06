@@ -104,9 +104,11 @@ import com.tradable.api.entities.OrderDuration;
 import com.tradable.api.entities.OrderSide;
 import com.tradable.api.entities.OrderStatus;
 import com.tradable.api.entities.OrderType;
+import com.tradable.api.services.executor.ModifyOrderAction;
 import com.tradable.api.services.executor.ModifyOrderActionBuilder;
 import com.tradable.api.services.executor.OrderAction;
 import com.tradable.api.services.executor.OrderActionRequest;
+import com.tradable.api.services.executor.PlaceOrderAction;
 import com.tradable.api.services.executor.PlaceOrderActionBuilder;
 import com.tradable.api.services.executor.TradingRequest;
 import com.tradable.api.services.executor.TradingRequestExecutor;
@@ -271,15 +273,18 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule,
 	//We also recall that CurrentAccountServiceListener fires up an event whenever
 	//an order is placed, a trade takes place, and or a position changes. This method
 	//thus includes code that simply writes down whatever it sees happening in the textPane.
+	//We note that currentAccount is set on every event, as this is currently the only way
+	//to always have the latest information in the currentAccount object.
 	//====================================================================================	
 
 
 	@Override
     public void accountUpdated(AccountUpdateEvent event) {
+	
+		currentAccount = accountSubscriptionService.getCurrentAccount();
         if (event.isReset()) {
-        	
-    		currentAccount = accountSubscriptionService.getCurrentAccount();
     		accountId = currentAccount.getAccountId();
+    		
         } 
         else {
         	
@@ -428,11 +433,9 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule,
             
             catch (BadLocationException e) {
     			e.printStackTrace();
-    		}
-    		
+    		}   		
 
-        }
-        
+        }       
 
     }	
     //====================================================================================
@@ -480,19 +483,20 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule,
 	//appropriate fields. If an exception occurs (due to the randomly chosen symbol),
 	//the next click will find another instrument and try printing its values too.
     //2). On the second click, the user
-    //places a good till cancelled market order for 100'000. When the market is open, this 
+    //places a good till cancelled market order for 2'000. When the market is open, this 
     //order should be filled almost instantly and the program will print the order, trade
     //and position information out accordingly.
-    //3). On the third click, the user will try placing a limit order for 75'000.
+    //3). On the third click, the user will try placing a limit order for 1'000.
     //The limit is set so that the order will never be filled and it will remain pending
     //or in "working" state. 
     //4). On the fourth click, the user changes the last pending order he placed and 
-    //now places a limit order for 90'000 that should be filled instantly as the set limit 
+    //now places a limit order for 1'500 that should be filled instantly as the set limit 
     //is slightly higher than the latest found ask price. We note that on the fourth click, 
     //the App gets a list of all working methods using the getWorkingOrdersList() method which is 
     //defined here which quite simply returns a list of working orders. Once it has the list of 
     //working orders, it selects the one to modify by checking both the instrument it uses and the 
 	//Quantity ordered.
+	//When clicked again, go to 1).
     //
     //placeOrder(..):
     //Is an Overloaded method that allows a user to place either a Limit or a Market order.
@@ -558,36 +562,48 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule,
 			
 		}
 		
-		else if (clickRound % 3 == 1){
+		else if (clickRound == 1){
 			
-			placeOrder(instrument, OrderSide.SELL, OrderDuration.DAY, OrderType.MARKET, 100000.0); 
+			placeOrder(instrument, OrderSide.SELL, OrderDuration.DAY, OrderType.MARKET, 2000.0); 
 
 		}
 		
-		else if (clickRound % 3 == 2){
+		else if (clickRound == 2){
 			//setting the limit price at a value that will not be filled (15 % below the current asking price)
-			placeOrder(instrument, OrderSide.BUY, OrderDuration.DAY, OrderType.LIMIT, 75000.0, 0.85*ask.getPrice()); 
+			placeOrder(instrument, OrderSide.BUY, OrderDuration.DAY, OrderType.LIMIT, 1000.0, 0.85*ask.getPrice()); 
 			
 		}
 		
-		else{ //clickRound is > 0 && clickRound % 3 == 0
+		else{ //clickRound is 3
 			
     		List<Order> workingOrders = getWorkingOrdersList();
     		Order orderToModify = null;
     		if (workingOrders == null){
+    			clickRound = 0;
     			return; //there was an error, the order could not be found.
     		}
     		else{
     			for(Order order : workingOrders){
-
-    				if(order.getInstrument().getSymbol() == instrument.getSymbol() && order.getQuantity() == 75000.0){
+    				
+    				if((order.getInstrument().getSymbol() == instrument.getSymbol()) 
+    						&& (order.getQuantity() == 1000.0))
     					orderToModify = order;
-    				}
     				
     			}
     		}
 
-			modifyOrder(orderToModify, OrderDuration.DAY, 90000.0);
+			modifyOrder(orderToModify, OrderDuration.DAY, 1500.0);
+			try {
+				textPane.getDocument().insertString(textPane.getCaretPosition() , 
+						"Order is being modified \n" + 
+						"Click again to get prices for another symbol\n\n" , null);
+				clickRound = 0;
+				return;
+			} catch (BadLocationException ex) {
+				ex.printStackTrace();
+				clickRound = 0;
+			}
+			
 			
 		}
 		
@@ -603,7 +619,6 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule,
 	public void placeOrder(Instrument instrument, OrderSide orderSide, OrderDuration orderDuration, 
 			OrderType orderType, Double quantity, Double limit) {
 		
-
 		PlaceOrderActionBuilder orderActionBuilder = new PlaceOrderActionBuilder();
 		orderActionBuilder.setInstrument(instrument); // instrument object set in constructor
 		orderActionBuilder.setOrderSide(orderSide);
@@ -619,10 +634,10 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule,
 		
 
 		orderActionBuilder.setQuantity(quantity);
-
-		OrderAction orderAction = orderActionBuilder.build();
-
+		PlaceOrderAction orderAction = orderActionBuilder.build();
+		
 		OrderActionRequest request = new OrderActionRequest(accountId, orderAction); 
+		
 
 		logger.info("Executing command: {}", ++commandIdSeed);
 
@@ -650,14 +665,14 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule,
 	    orderActionBuilder.setDuration(orderDuration);
 	    orderActionBuilder.setQuantity(quantity);
 
-	    OrderAction orderAction = orderActionBuilder.build();
+	    ModifyOrderAction modOrderAction = orderActionBuilder.build();
 
-	    OrderActionRequest request = new OrderActionRequest(accountId, orderAction);
-	    
+	    OrderActionRequest modRequest = new OrderActionRequest(accountId, modOrderAction);
+		
 	    logger.info("Executing command: {}", ++commandIdSeed);
 
 	    try {
-	    	executor.execute(request, this);
+	    	executor.execute(modRequest, this);
 	    } 
 	    catch (RuntimeException  ex) {
 	    	logger.error("Failed to submit command: {}", commandIdSeed, ex);
@@ -678,12 +693,9 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule,
 	
 	public List<Order> getWorkingOrdersList(){
 
-		
-		List<Order> allOrders = currentAccount.getOrders();
-		
 		//to get the list of all working orders, I.e. orders that i can actually modify. 
 		List<Order> workingOrders = new ArrayList<Order>(); 
-		for (Order order : allOrders){
+		for (Order order : currentAccount.getOrders()){
 			if (order.getStatus() == OrderStatus.WORKING){
 				workingOrders.add(order);
 			}

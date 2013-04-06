@@ -92,6 +92,10 @@ public class HtCreateNewPositionFactory implements WorkspaceModuleFactory{
 	
 	@Autowired
 	private QuoteTickService quoteTickService; 
+	//====================================================================================
+	//====================================================================================
+	
+	
 	
 	
 	//========= (3) TradingRequestExecutor object has to be instantiated here.==========//
@@ -100,8 +104,6 @@ public class HtCreateNewPositionFactory implements WorkspaceModuleFactory{
 	//====================================================================================
 	@Autowired
 	private TradingRequestExecutor executor; 
-	
-	
 	//====================================================================================
 	//====================================================================================
 	
