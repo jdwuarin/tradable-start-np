@@ -1,126 +1,138 @@
+//============================================================================
+// Name        : HtCreateNewPositionFactory.java
+// Author      : John-David "JD" Wuarin
+// Copyright (c) 2013 tradable ApS.
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense,
+// and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+//
+//============================================================================
+
+
+/*************************************************************************************
+ * This program is to be used as a learning tool and as a basis for creating
+ * bigger more elaborate tradable apps. The use of the different tradable APIs is 
+ * heavily commented and the different services and listeners used are segmented
+ * in an obvious manner so as to allow developers to remove and keep only the
+ * code samples of interest to them. 
+ * 
+ *  For the README on how to to start working on your own project using this 
+ *  code, please go to: https://github.com/john-dwuarin/tradable-start-np
+ *************************************************************************************/
+
 package com.tradable;
+
+//==Will be imported in most of your apps in order to use the @Autowired notation==//
 
 import org.springframework.beans.factory.annotation.Autowired;
 
+
+//========= (0) component API, has to be imported in any project==========//
+//====================================================================================
 import com.tradable.api.component.WorkspaceModule;
 import com.tradable.api.component.WorkspaceModuleCategory;
 import com.tradable.api.component.WorkspaceModuleFactory;
+//====================================================================================
+//====================================================================================
+
+
+//========= (1) Import if App will be using the CurrentAccountService API==========//
+//This will be the case for most apps as account changes are quite important to listen to
+//====================================================================================
 import com.tradable.api.services.account.CurrentAccountService;
-import com.tradable.api.services.executor.TradingRequestExecutor;
+
+
+//========= (2) Import if App will be using the InstrumentService API==========//
 import com.tradable.api.services.instrument.InstrumentService;
+
+
+//========= (3) Import if App will be using the TradingRequestExecutor API==========//
+//Import this if you want your App to be able to place, change or cancel any trades.
+//====================================================================================
+import com.tradable.api.services.executor.TradingRequestExecutor;
+
+
 
 public class HtCreateNewPositionFactory implements WorkspaceModuleFactory{
 
-	@Autowired
-	private TradingRequestExecutor executor;  //create a trading request executor in 
-	
+	//========= (1) CurrentAccountService object has to be instantiated here.==========//
+	//The container or "application context" injects an instance of CurrentAccountService 
+	//We note that there is no need to use the new qualifier as spring takes care of this 
+	//for us. This notation only works by placing an instance of the CurrentAccountService
+	//bean into the HtCreateNewPositionFactory bean. The @Autowired notation only works
+	//if both interfaces/classes are beans. This means that the all the services we use
+	//here have been defined in the tradable API as being beens. Of course, the 
+	//HtCreateNewPositionFactory class is also a been as we specify it in app-context.xml
+	//====================================================================================
 	@Autowired
 	CurrentAccountService accountSubscriptionService;
 	
+	
+	//========= (2) InstrumentService object has to be instantiated here.==========//
 	@Autowired
 	InstrumentService instrumentService;
 	
-	@Autowired
-	public void setExecutor(TradingRequestExecutor executor) {
-		this.executor = executor;		
-	}	
 	
-	/**
-	 * @param args
-	 */
-	public static void main(String[] args) {
-		// TODO Auto-generated method stub
-
-	}
-
+	//========= (3) TradingRequestExecutor object has to be instantiated here.==========//
+	//The TradingRequestExecutor is also a bean and is the equivalent of ou services when
+	//it comes to executing stuff rather than listening for stuff to happen.
+	//====================================================================================
+	@Autowired
+	private TradingRequestExecutor executor; 
+	
+	
+	//====================================================================================
+	//====================================================================================
+	
+	
+	
+	
+	//== (0) just the 4 interfaces that have to be implemented as per our component API=//
+	//====================================================================================
+	
 	@Override
 	public WorkspaceModule createModule() {
-		// TODO Auto-generated method stub
-		return new HtCreateNewPosition(executor, accountSubscriptionService, instrumentService);
+
+		return new HtCreateNewPosition(executor, accountSubscriptionService, 
+				instrumentService);
 	}
 
 	@Override
 	public WorkspaceModuleCategory getCategory() {
-		// TODO Auto-generated method stub
 		return WorkspaceModuleCategory.MISCELLANEOUS;
 	}
 
 	@Override
 	public String getDisplayName() {
-		// TODO Auto-generated method stub
+		
 		return "How-To Create New Position";
 	}
 
 	@Override
 	public String getFactoryId() {
-		// TODO Auto-generated method stub
+		//don't forget to change me!!!
 		return "com.tradable.HtCreateNewPosition";
 	}
+	
+	//====================================================================================
+	//====================================================================================
+	
+	
 
+	public static void main(String[] args) {
+
+	}
 }
-
-
-
-/*
- * package com.tradable.api.samples;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-
-import com.tradable.api.entities.Instrument;
-import com.tradable.api.entities.OrderDuration;
-import com.tradable.api.entities.OrderSide;
-import com.tradable.api.entities.OrderType;
-import com.tradable.api.services.executor.OrderAction;
-import com.tradable.api.services.executor.OrderActionRequest;
-import com.tradable.api.services.executor.PlaceOrderActionBuilder;
-import com.tradable.api.services.executor.TradingRequest;
-import com.tradable.api.services.executor.TradingRequestExecutor;
-import com.tradable.api.services.executor.TradingRequestListener;
-import com.tradable.api.services.executor.TradingResponse;
-
- public class OrderActionRequestSample implements TradingRequestListener {
-
-  private static final Logger logger = LoggerFactory.getLogger(OrderActionRequestSample.class);
-
-  private TradingRequestExecutor executor;
-
-  private int commandIdSeed;
-
-  @Autowired
-  public void setExecutor(TradingRequestExecutor executor) {
-      this.executor = executor;
-  }
-
-  public void placeMarketOrder(Integer accountId, Instrument instrument, OrderSide orderSide, OrderDuration orderDuration, Double quantity) {
-      PlaceOrderActionBuilder orderActionBuilder = new PlaceOrderActionBuilder();
-      orderActionBuilder.setInstrument(instrument);
-      orderActionBuilder.setOrderSide(orderSide);
-      orderActionBuilder.setDuration(orderDuration);
-      orderActionBuilder.setOrderType(OrderType.MARKET);
-      orderActionBuilder.setQuantity(quantity);
-
-      OrderAction orderAction = orderActionBuilder.build();
-
-      OrderActionRequest request = new OrderActionRequest(++commandIdSeed, accountId, orderAction);
-
-      logger.info("Executing command: {}", commandIdSeed);
-
-      try {
-          executor.execute(request, this);
-      } catch (RuntimeException ex) {
-          logger.error("Failed to submit command: {}", commandIdSeed, ex);
-      }
-  }
-
-  @Override
-  public void requestExecuted(TradingRequestExecutor executor, TradingRequest request, TradingResponse response) {
-      if (response.isSuccess()) {
-          logger.info("Command is successfully executed: {}", request.getId());
-      } else {
-          logger.error("Command is failed to execute: {}", request.getId(), response.getCause());
-      }
-  }
- }
- */

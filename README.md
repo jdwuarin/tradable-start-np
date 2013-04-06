@@ -3,10 +3,17 @@ tradable-start-np
 =================
 A starting point for creating tradable apps. Just clone and start hacking away. This starting point  includes code that:
 
-* Places a market order and uses the client order id.
-* Sends a pending order an watch for its execution
+* Places a market order
+* Sends a pending order an watches for its execution
 * Monitors the change in position once an order is placed
-* Makes use of tracks and places orders on different tracks.
+* Changes a pending order
+
+It presents this in a small app that includes a button and a small output window. When clicked, the button passes hard-coded arbitrarily set orders for trades.
+
+* The first click sends a market order that should be filled immediately
+* The second click will send a limit order that shouldn't be filled.
+* The third click will change that unfilled working order and send a new limit order for a different amount.
+* You can monitor the execution of your trades in the window right below the button.
 
 If you've read the API documentation on our website and want to start coding straight away using this project as a base for your app, here's what you need to do:
 
@@ -41,4 +48,5 @@ Cloning and opening the project in Eclipse
 3. You can now go about renaming the project and the classes by right clicking on them and refractor -> rename. You should also update the JRE System Library the project uses by right-clicking on JRE System Library and using the latest version available. You will have to edit the **src/main/resources/META-INF/MANIFEST.MF** and the **src/main/resources/META-INF/spring/app-context.xml** files as per the link mentioned in point 2 to reflect your project's and/or your company 's name (remember that the "*class=*" qualifier in the app-context file takes the inverse .com name of your factorie's class as an argument). **But most importantly, you will have to edit the *pom.xml* file (preferably using the xml view of Eclipse) and change the GroupId and ArtifactId values.** Remember that the GroupId value should be in inverse .com notation and should reflect the name of the entity you are doing the project for and ArtifactId is quite simply the name of your project.   
 
 
-Open up the Howto page to find out how this page was written.
+Clone this project and open up the code to see how it all works. The code is heavily documented and if you run the App while reading it, you will get a great feel of how it works.
+If you want to have an overall view of all our APIs, go here.
