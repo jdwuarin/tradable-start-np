@@ -4,17 +4,17 @@ tradable-start-np
 A starting point for creating tradable apps. Just clone and start hacking away. This starting point  includes code that:
 
 * Places a market order
-* Sends a pending order an watches for its execution
+* Sends a pending order and watches for its execution
 * Monitors the change in position once an order is placed
 * Changes a pending order
 
 It presents this in a small app that includes a button and a small output window. When clicked, the button passes hard-coded arbitrarily set orders for trades.
 
 * The first click randomly selects the instrument to use from the list of available instruments
-* The second click sends a market order that should be filled immediately
-* The third click will send a limit order that shouldn't be filled.
-* The fourth click will change that unfilled working order and send a new limit order for a different amount.
-* You can monitor the execution of your trades in the window right below the button.
+* The second click sends a short market order that should be filled immediately
+* The third click will send a long limit order that shouldn't be filled (at 85% of the latest ask price)
+* The fourth click will change that unfilled working order and send a new long limit order for a different amount which should be filled as it is slightly above the ask price (101% of ask price)
+* You can monitor the execution of your orders in the window right below the button.
 
 If you want to get started with tradable Apps using this project as a base for your code, here's what you need to do: 
 

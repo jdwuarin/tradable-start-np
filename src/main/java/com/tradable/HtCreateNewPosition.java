@@ -47,6 +47,7 @@ import java.lang.String;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JTextField;
 import javax.swing.JTextPane;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.JButton;
@@ -85,6 +86,11 @@ import com.tradable.api.entities.Instrument;
 import com.tradable.api.services.instrument.InstrumentService;
 import com.tradable.api.services.instrument.InstrumentServiceListener;
 import com.tradable.api.services.instrument.InstrumentUpdateEvent;
+import com.tradable.api.services.marketdata.Quote;
+import com.tradable.api.services.marketdata.QuoteTickEvent;
+import com.tradable.api.services.marketdata.QuoteTickListener;
+import com.tradable.api.services.marketdata.QuoteTickService;
+import com.tradable.api.services.marketdata.QuoteTickSubscription;
 //====================================================================================
 //====================================================================================
 
@@ -110,7 +116,8 @@ import com.tradable.api.services.executor.TradingResponse;
 //====================================================================================
 
 public class HtCreateNewPosition extends JPanel implements WorkspaceModule, 
-		TradingRequestListener, CurrentAccountServiceListener, InstrumentServiceListener, ActionListener{
+		TradingRequestListener, CurrentAccountServiceListener, InstrumentServiceListener, 
+		QuoteTickListener, ActionListener{
 	
 	//====================================================================================
 	//This a static final long object serialVersionUID variable has to be declared as 
@@ -125,29 +132,63 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule,
 	private static final Logger logger = LoggerFactory.getLogger(HtCreateNewPosition.class);
 	
 	private static final String TITLE = "Rename me";
+
+	//========================================(1)========================================//
+	//Declaring CurrentAccountService object and Account object. The CurrentAccountService
+	//object will be set in the constructor (from our factory). We declare it here too, in
+	//order for it to be accessible in other methods and not just the constructor. We also
+	//declare an Account object which will be set whenever the account is reset. Such an
+	//event is said to occur whenever the Module starts up and whenever the user selects
+	//a different account to use. The accountId value is found once the Account object
+	//is instantiated. This also happens whenever the Account is reset, i.e. in this
+	//case, when a new Module's instantiation is open. The accountId is used for passing
+	//orders.
+	//==================================================================================	
+	CurrentAccountService accountSubscriptionService;
+	Account currentAccount;
+	private int accountId;
+	//==================================================================================	
+	//==================================================================================	
 	
+	//========================================(2)========================================//
+	//We here declare the objects that will be used for for monitoring the user account's
+	//instruments and for monitoring the bid and ask prices of an instrument once we have
+	//subscribed to listening to changes in it.
+	//The two Quote objects will be used once an instrument is identified to update and
+	//display the latest bid and ask prices.
+	//==================================================================================
+	private InstrumentService instrumentService;
+	private Instrument instrument;
+	private QuoteTickService quoteTickService;
+	private QuoteTickSubscription subscription;
+	private Quote bid;
+	private Quote ask;
+	//==================================================================================	
+	//==================================================================================	
 	
-	
-	
+	//========================================(3)========================================//
+	//The TradingRequestExecutor object is in charge of executing the trades once all the 
+	//settings pertaining to it have been set. The commandIdSeed is just a number that allows
+	//us to track internally the number of the command we are at. This is usde in the log.
+	//==================================================================================
 	private TradingRequestExecutor executor;
 	private int commandIdSeed;
-
-	CurrentAccountService accountSubscriptionService;
-	Account currentAccount = null;
-	private int accountId;
+	//==================================================================================	
+	//==================================================================================
 	
-	private InstrumentService instrumentService;
-	private Instrument instrument= null;
-
+	
 	
 	private JTextPane textPane;
 	private JButton btnNewButton;
+	final JTextField bidTextfield;
+	final JTextField askTextField;
+
 	
-	private static int clickRound;
+	static int clickRound;
 	
 	public HtCreateNewPosition(TradingRequestExecutor executor, 
-			final CurrentAccountService accountSubscriptionService, 
-			final InstrumentService instrumentService) {
+			CurrentAccountService accountSubscriptionService, 
+			InstrumentService instrumentService, QuoteTickService quoteTickService) {
 			
 		
 		//============= This code sets up the visual component of our Module==============//
@@ -158,19 +199,32 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule,
 		putClientProperty(WorkspaceModuleProperties.COMPONENT_TITLE, TITLE);
 		putClientProperty(WorkspaceModuleProperties.COMPONENT_RESIZE_ENABLED, false);
 		
+		//used for printing the quotes
+		bidTextfield = new JTextField();
+		bidTextfield.setEditable(false);
+		bidTextfield.setBounds(40, 70, 140, 30);
+		add(bidTextfield);
+		askTextField = new JTextField();
+		askTextField.setEditable(false);
+		askTextField.setBounds(220, 70, 140, 30);
+		add(askTextField);
+
+		
+		//used for printing account events such as Order, Trade or Position changes
 		JScrollPane scrollPane = new JScrollPane();
 		scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_ALWAYS);
 		scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
-		scrollPane.setBounds(0, 60, 400, 340);
-		add(scrollPane);
-		
+		scrollPane.setBounds(0, 120, 400, 280);
+		add(scrollPane);	
 		textPane = new JTextPane();
 		textPane.setEditable(false);
 		scrollPane.setViewportView(textPane); //setting the JScrollPane object to the textPane.
 		
+		
+		//used for the button to allow the user to set instruments and pass orders.
 		JButton btnNewButton = new JButton("Click Me");
 		btnNewButton.addActionListener(this); //we note we have to add an action listener here.
-		btnNewButton.setBounds(150, 13, 100, 34);
+		btnNewButton.setBounds(150, 20, 100, 30);
 		add(btnNewButton);	
 		
 		
@@ -180,7 +234,7 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule,
 		
 		
 		//========================================(1)========================================//
-		//this object is a CurrentAccountServiceListener object too, so we can add listener 
+		//the "this" object is a CurrentAccountServiceListener object too, so we can add listeners 
 		//this way. We also set the accountService object to the one Autowired in the factory 
 		this.accountSubscriptionService = accountSubscriptionService;
 		this.accountSubscriptionService.addListener(this);
@@ -188,8 +242,16 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule,
 		//====================================================================================	
 		
 		//========================================(2)========================================//
+		//
+		//We note, for the QuoteTickService interface, the only available method to its objects
+		//is the createSubscription() one. Then the subscription listens for the changes in the
+		//this object.
+		//====================================================================================	
 		this.instrumentService = instrumentService;
 		this.instrumentService.addListener(this);
+		this.quoteTickService = quoteTickService; 
+		subscription = quoteTickService.createSubscription();
+        subscription.setListener(this);  //num: subscription now listens to this (as I am implementing the quoteTickListener)
 		
 		//========================================(3)========================================//
 		this.executor = executor; //no need to add listeners as this object takes action.
@@ -390,6 +452,13 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule,
     public void instrumentsUpdated(InstrumentUpdateEvent event) { 
         
     }
+    
+	@Override
+	public void quotesUpdated(QuoteTickEvent event) {
+		bidTextfield.setText("currBid: " + String.valueOf(bid.getPrice()));	
+		askTextField.setText("currAsk: " + String.valueOf(ask.getPrice()));                                                    	    	
+		
+	}
     //====================================================================================
     //====================================================================================	
     
@@ -403,23 +472,27 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule,
     //
     //actionPerformed(..):
     //
-    //1). THe first click will set randomly the instrument to use amongst the Collection
+    //1). On The first click will set randomly the instrument to use amongst the Collection
     //of instruments that was returned using the getInstruments(String Symbol) method.
-    //This is meant to show how the COllection might be used to search through it and
-    //find instruments.
-    //2). on the first click, the user
+    //This is meant to show how the Collection might be used to search through it and
+    //find instruments. Then, the QuoteTickSubscription is set to the symbol of the 
+	//instrument in question and the latest bid and ask prices are printed in the
+	//appropriate fields. If an exception occurs (due to the randomly chosen symbol),
+	//the next click will find another instrument and try printing its values too.
+    //2). On the second click, the user
     //places a good till cancelled market order for 100'000. When the market is open, this 
     //order should be filled almost instantly and the program will print the order, trade
     //and position information out accordingly.
-    //3). On the second click, the user will try placing a limit order for 75'000.
+    //3). On the third click, the user will try placing a limit order for 75'000.
     //The limit is set so that the order will never be filled and it will remain pending
     //or in "working" state. 
-    //4). On the third click, the user changes the last pending order he placed and 
-    //now places a limit order for 90'000 that will be filled when the price reached the limit 
-    //when the market is open. We note that on the third click, the App gets a list of all
-    //working methods using the getWorkingOrdersList() method which is defined here which
-    //quite simply returns a list of working methods. Once it has the list of workingOrders,
-    //it selects the one to modify by checking both the instrument it uses and the Quantity ordered.
+    //4). On the fourth click, the user changes the last pending order he placed and 
+    //now places a limit order for 90'000 that should be filled instantly as the set limit 
+    //is slightly higher than the latest found ask price. We note that on the fourth click, 
+    //the App gets a list of all working methods using the getWorkingOrdersList() method which is 
+    //defined here which quite simply returns a list of working orders. Once it has the list of 
+    //working orders, it selects the one to modify by checking both the instrument it uses and the 
+	//Quantity ordered.
     //
     //placeOrder(..):
     //Is an Overloaded method that allows a user to place either a Limit or a Market order.
@@ -449,13 +522,7 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule,
 	@Override
 	public void actionPerformed(ActionEvent arg0) {
 		
-		//instrument = instrumentService.getInstrument("EURUSD"); //
-		//instrument = (Instrument) instrumentService.getInstruments().toArray()[0];
-		
-		//we send a market order that should be filled almost immediately.
-		
-		//This is mostly to show how to use getInstruments. Most of the instruments
-		//are actually not tradable and some or all the orders won't go through.
+
 		if (clickRound == 0){
 			Random randGen = new Random();
 			int randomIndex = randGen.nextInt(instrumentService.getInstruments().size()-1);
@@ -468,6 +535,27 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule,
 				e.printStackTrace();
 			}
 			
+
+			subscription.setSymbol(instrument.getSymbol());			
+            ask = subscription.getAsk(instrument.getSymbol());            
+            bid = subscription.getBid(instrument.getSymbol());
+            
+			try {
+	            bidTextfield.setText("currBid: " + String.valueOf(bid.getPrice()));	
+	            askTextField.setText("currAsk: " + String.valueOf(ask.getPrice()));
+
+			} catch (Exception e) {
+				try {
+					textPane.getDocument().insertString(textPane.getCaretPosition() , 
+							"Exception caught, symbol cannot be used at this time \n" + 
+							"Click again to get prices for another symbol\n\n" , null);
+				} catch (BadLocationException ex) {
+					ex.printStackTrace();
+				}
+				e.printStackTrace();
+				return; //clickRound not incremented.
+			}
+			
 		}
 		
 		else if (clickRound % 3 == 1){
@@ -477,9 +565,8 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule,
 		}
 		
 		else if (clickRound % 3 == 2){
-			//setting the limit price at a value that will not be filled at this time (April 6th 2013)
-			// yet won't be rejected by the container.
-			placeOrder(instrument, OrderSide.BUY, OrderDuration.DAY, OrderType.LIMIT, 75000.0, 1.2); 
+			//setting the limit price at a value that will not be filled (15 % below the current asking price)
+			placeOrder(instrument, OrderSide.BUY, OrderDuration.DAY, OrderType.LIMIT, 75000.0, 0.85*ask.getPrice()); 
 			
 		}
 		
@@ -543,7 +630,7 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule,
 			executor.execute(request, this);
 		} 
 		
-		catch (RuntimeException ex) {
+		catch (Exception ex) {
 			logger.error("Failed to submit command: {}", commandIdSeed, ex);
 		}	
 	}	
@@ -559,6 +646,7 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule,
 		
 		ModifyOrderActionBuilder orderActionBuilder = new ModifyOrderActionBuilder(orderToModify);
 		orderActionBuilder.setOrderType(OrderType.LIMIT);
+		orderActionBuilder.setLimitPrice(1.01* ask.getPrice()); //setting ask price to get filled almost surely
 	    orderActionBuilder.setDuration(orderDuration);
 	    orderActionBuilder.setQuantity(quantity);
 
@@ -613,13 +701,16 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule,
  
 	
 	
-	
-    
+	//====================================================================================
+    //Don't forget to remove listeners. For the subscription object, the destroy() method
+	//takes care of that for us.
+	//====================================================================================
 	@Override
 	public void destroy() {
 		
 		accountSubscriptionService.removeListener(this);
 		instrumentService.removeListener(this);
+		subscription.destroy();
 	}
 
 	@Override
