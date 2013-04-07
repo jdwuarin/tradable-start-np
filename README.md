@@ -1,4 +1,3 @@
-
 tradable-start-np
 =================
 A starting point for creating tradable apps. Just clone and start hacking away. This starting point  includes code that:
@@ -40,7 +39,7 @@ Cloning and opening the project in Eclipse
             $ cd path/to/your/worksapce
  * Then clone the git repository using:
 
-            $ git clone https://github.com/john-dwuarin/tradable-start-np.git [name_of_firectory_to_copy_to]
+            $ git clone https://github.com/tradable/tradable-start-np.git [name_of_firectory_to_copy_to]
  * Once the directory is cloned in your Worskpace, you will probably want to remove the origin remote from your local repo, as you probably will not want to be linked to this repository as no actual work is done on it:
 
             $ git remote rm origin
