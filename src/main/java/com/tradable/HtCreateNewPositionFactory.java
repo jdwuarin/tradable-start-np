@@ -138,9 +138,4 @@ public class HtCreateNewPositionFactory implements WorkspaceModuleFactory{
 	//====================================================================================
 	//====================================================================================
 	
-	
-
-	public static void main(String[] args) {
-
-	}
 }

@@ -380,28 +380,6 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule,
                 	}
                 	
                 }
-                	
-                
-                for (Position position : mychangedPositions){
-                		
-
-    				if (position.getQuantity() > 0){
-    					textPane.getDocument().insertString(textPane.getCaretPosition() , 
-    							" You are now long " + position.getQuantity() + " " 
-    							+ position.getInstrument().getSymbol()+ "\n" , null);
-    				}
-    				else if (position.getQuantity() < 0){
-    					textPane.getDocument().insertString(textPane.getCaretPosition() ,
-    							" You are now short (" + Math.abs(position.getQuantity()) + ")" 
-    							+ position.getInstrument().getSymbol()+ "\n" , null);
-    				}
-    				else{
-    					textPane.getDocument().insertString(textPane.getCaretPosition() ,
-    							" You are now flat on " + position.getInstrument().getSymbol()
-    							+ "\n" , null);
-    				}
-                	            	
-                }
                 
                 
                 for (Trade trade : mychangedTrades){
@@ -426,6 +404,29 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule,
         	
             	
                 }
+                	
+                
+                for (Position position : mychangedPositions){
+                		
+
+    				if (position.getQuantity() > 0){
+    					textPane.getDocument().insertString(textPane.getCaretPosition() , 
+    							" You are now long " + position.getQuantity() + " " 
+    							+ position.getInstrument().getSymbol()+ "\n" , null);
+    				}
+    				else if (position.getQuantity() < 0){
+    					textPane.getDocument().insertString(textPane.getCaretPosition() ,
+    							" You are now short (" + Math.abs(position.getQuantity()) + ") " 
+    							+ position.getInstrument().getSymbol()+ "\n" , null);
+    				}
+    				else{
+    					textPane.getDocument().insertString(textPane.getCaretPosition() ,
+    							" You are now flat on " + position.getInstrument().getSymbol()
+    							+ "\n" , null);
+    				}
+                	            	
+                }
+                
                 
     			textPane.getDocument().insertString(textPane.getCaretPosition() , "\n" , null);
             
