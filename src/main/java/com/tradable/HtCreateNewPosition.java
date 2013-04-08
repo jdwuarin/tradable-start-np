@@ -595,8 +595,7 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule,
 			modifyOrder(orderToModify, OrderDuration.DAY, 1500.0);
 			try {
 				textPane.getDocument().insertString(textPane.getCaretPosition() , 
-						"Order is being modified \n" + 
-						"Click again to get prices for another symbol\n\n" , null);
+						"Order is being modified \n\n" , null);
 				clickRound = 0;
 				return;
 			} catch (BadLocationException ex) {
