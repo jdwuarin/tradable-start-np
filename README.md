@@ -52,7 +52,7 @@ Cloning and opening the project in Eclipse
  * Right clicking your classes names to rename them, then them and refactor -> rename. 
  * You will have to edit the **src/main/resources/META-INF/MANIFEST.MF** and the **src/main/resources/META-INF/spring/app-context.xml** files as per the link mentioned in point 2 to reflect your project's and/or your company 's name (remember that the "*class=*" qualifier in the app-context file takes the inverse .com name of your factorie's class as an argument). 
  * **But most importantly, you will have to edit the *pom.xml* file (preferably using the xml view of Eclipse) and change the GroupId and ArtifactId values.** Remember that the GroupId value should be in inverse .com notation and should reflect the name of the entity you are doing the project for and ArtifactId is quite simply the name of your project.  
- * Last, in your factory class, update the *getDisplayName()* and *getFactoryId()* methods so that their return the now correct values.
+ * Last, in your factory class, update the *getDisplayName()* and *getFactoryId()* methods so that they return appropriate values.
 
 
 Clone this project and open up the code to see how it all works. The code is heavily documented and if you run the App while reading it, you will get a good feel of how it works.
