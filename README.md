@@ -47,7 +47,12 @@ Cloning and opening the project in Eclipse
 
  That's it. The project should now be open in Eclipse with the name tradable-start-np.
 
-3. You can now go about renaming the project and the classes by right clicking on them and refractor -> rename. You should also update the JRE System Library the project uses by right-clicking on JRE System Library and using the latest version available. You will have to edit the **src/main/resources/META-INF/MANIFEST.MF** and the **src/main/resources/META-INF/spring/app-context.xml** files as per the link mentioned in point 2 to reflect your project's and/or your company 's name (remember that the "*class=*" qualifier in the app-context file takes the inverse .com name of your factorie's class as an argument). **But most importantly, you will have to edit the *pom.xml* file (preferably using the xml view of Eclipse) and change the GroupId and ArtifactId values.** Remember that the GroupId value should be in inverse .com notation and should reflect the name of the entity you are doing the project for and ArtifactId is quite simply the name of your project.   
+3. You can now go about setting up appropriate names for your project: 
+ * Update the JRE System Library the project uses by right-clicking on JRE System Library and using the latest version available. 
+ * Right clicking your classes names to rename them, then them and refactor -> rename. 
+ * You will have to edit the **src/main/resources/META-INF/MANIFEST.MF** and the **src/main/resources/META-INF/spring/app-context.xml** files as per the link mentioned in point 2 to reflect your project's and/or your company 's name (remember that the "*class=*" qualifier in the app-context file takes the inverse .com name of your factorie's class as an argument). 
+ * **But most importantly, you will have to edit the *pom.xml* file (preferably using the xml view of Eclipse) and change the GroupId and ArtifactId values.** Remember that the GroupId value should be in inverse .com notation and should reflect the name of the entity you are doing the project for and ArtifactId is quite simply the name of your project.  
+ * Last, in your factory class, update the *getDisplayName()* and *getFactoryId()* methods so that their return the now correct values.
 
 
 Clone this project and open up the code to see how it all works. The code is heavily documented and if you run the App while reading it, you will get a good feel of how it works.
