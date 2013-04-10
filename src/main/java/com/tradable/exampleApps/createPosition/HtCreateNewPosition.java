@@ -33,7 +33,7 @@
  *************************************************************************************/
 
 
-package com.tradable;
+package com.tradable.exampleApps.createPosition;
 
 //= These libraries are imported either for the graphics component or for standard utility=//
 //====================================================================================
@@ -114,6 +114,8 @@ import com.tradable.api.services.executor.TradingRequest;
 import com.tradable.api.services.executor.TradingRequestExecutor;
 import com.tradable.api.services.executor.TradingRequestListener;
 import com.tradable.api.services.executor.TradingResponse;
+import com.tradable.api.services.executor.groups.CreateOCOGroupRequestBuilder;
+import com.tradable.api.services.executor.groups.OrderGroupRequest;
 //====================================================================================
 //====================================================================================
 
@@ -459,8 +461,15 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule,
     
 	@Override
 	public void quotesUpdated(QuoteTickEvent event) {
+		
+		//Quote objects have to be updated in order to get the correct
+		//current prices. Not the subscription object is updated by the
+		//container, thus the only way to update the Quote objects is to use it
+        ask = subscription.getAsk(instrument.getSymbol());
+        bid = subscription.getBid(instrument.getSymbol());
+
 		bidTextfield.setText("currBid: " + String.valueOf(bid.getPrice()));	
-		askTextField.setText("currAsk: " + String.valueOf(ask.getPrice()));                                                    	    	
+		askTextField.setText("currAsk: " + String.valueOf(ask.getPrice()));     
 		
 	}
     //====================================================================================
@@ -491,7 +500,7 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule,
     //The limit is set so that the order will never be filled and it will remain pending
     //or in "working" state. 
     //4). On the fourth click, the user changes the last pending order he placed and 
-    //now places a limit order for 1'500 that should be filled instantly as the set limit 
+    //now places a limit order for 2'000 that should be filled instantly as the set limit 
     //is slightly higher than the latest found ask price. We note that on the fourth click, 
     //the App gets a list of all working methods using the getWorkingOrdersList() method which is 
     //defined here which quite simply returns a list of working orders. Once it has the list of 
@@ -532,6 +541,7 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule,
 			Random randGen = new Random();
 			int randomIndex = randGen.nextInt(instrumentService.getInstruments().size()-1);
 			instrument = (Instrument) instrumentService.getInstruments().toArray()[randomIndex];
+			//instrument = instrumentService.getInstrument("EURUSD"); //used for testing on liquid instrument.
 			
 			try {
 				textPane.getDocument().insertString(textPane.getCaretPosition() , 
@@ -575,36 +585,39 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule,
 			
 		}
 		
-		else{ //clickRound is 3
-			
+		else if (clickRound == 3){
     		List<Order> workingOrders = getWorkingOrdersList();
     		Order orderToModify = null;
     		if (workingOrders == null){
-    			clickRound = 0;
     			return; //there was an error, the order could not be found.
     		}
     		else{
     			for(Order order : workingOrders){
     				
-    				if((order.getInstrument().getSymbol() == instrument.getSymbol()) 
+    				if((order.getInstrument().getSymbol().equals(instrument.getSymbol())) 
     						&& (order.getQuantity() == 1000.0))
     					orderToModify = order;
     				
     			}
     		}
 
-			modifyOrder(orderToModify, OrderDuration.DAY, 1500.0);
+			modifyOrder(orderToModify, OrderDuration.DAY, 5000.0);
 			try {
 				textPane.getDocument().insertString(textPane.getCaretPosition() , 
 						"Order is being modified \n\n" , null);
-				clickRound = 0;
-				return;
+				
 			} catch (BadLocationException ex) {
 				ex.printStackTrace();
-				clickRound = 0;
 			}
 			
 			
+		}
+		
+		else{
+			OCOOrder();
+			clickRound = 0;
+			return;
+					
 		}
 		
 		++clickRound;
@@ -673,6 +686,53 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule,
 
 	    try {
 	    	executor.execute(modRequest, this);
+	    } 
+	    catch (RuntimeException  ex) {
+	    	logger.error("Failed to submit command: {}", commandIdSeed, ex);
+	    }
+		
+	}
+	
+	
+	public void OCOOrder(){
+			
+		CreateOCOGroupRequestBuilder OCOBuilder = new CreateOCOGroupRequestBuilder();
+
+		//find a position you want to set an OCO order to.
+		//This code assumes a position long 3000 EURUSD was taken
+		//the current account. The position object is found that way
+		Position oCOPosition = null;
+		List<Position> positions = currentAccount.getPositions();
+		for (Position pos : positions){
+			if (pos.getInstrument().getSymbol().equals(instrument.getSymbol())
+					&& (pos.getQuantity() == 3000.0)){
+				oCOPosition = pos;
+			}
+			
+		}
+		if (oCOPosition == null) {return;}
+		
+		//We then have to set the position to the builder.
+		//Quantity is set to 3000 too. Could be different.
+		//setStopLoss sets the price we want to set our stop loss to.
+		//This sets the price of the STOP order. We also specify here 
+		//that this is a SELL order (as we are long 3000 EURUSD)
+		//setTakeProfit sets the price for the LIMIT order. Our
+		//limit order is set slightly higher than the current price so 
+		//that we would actually take a profit is the price was hit.
+		OCOBuilder.setPosition(oCOPosition);
+		OCOBuilder.setQuantity(3000.0);
+		OCOBuilder.setRequestId(++commandIdSeed);
+		OCOBuilder.setStopLoss(0.98 * bid.getPrice(), OrderSide.SELL);
+		OCOBuilder.setTakeProfit(1.02 * ask.getPrice());
+
+		OrderGroupRequest orderGroupRequest = OCOBuilder.build();
+		
+		
+	    logger.info("Executing command: {}", commandIdSeed);
+
+	    try {
+	    	executor.execute(orderGroupRequest, this);
 	    } 
 	    catch (RuntimeException  ex) {
 	    	logger.error("Failed to submit command: {}", commandIdSeed, ex);

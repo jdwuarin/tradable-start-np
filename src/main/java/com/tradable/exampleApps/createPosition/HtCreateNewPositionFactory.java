@@ -33,7 +33,7 @@
  *  code, please go to: https://github.com/john-dwuarin/tradable-start-np
  *************************************************************************************/
 
-package com.tradable;
+package com.tradable.exampleApps.createPosition;
 
 //==Will be imported in most of your apps in order to use the @Autowired notation==//
 
