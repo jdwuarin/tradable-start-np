@@ -37,8 +37,6 @@ package com.tradable.exampleApps.createPosition;
 
 //= These libraries are imported either for the graphics component or for standard utility=//
 //====================================================================================
-import java.util.ArrayList; 
-import java.util.Collection;
 import java.util.List; 
 import java.util.Random;
 import java.lang.String;
@@ -73,10 +71,7 @@ import com.tradable.api.component.state.PersistedStateHolder;
 
 //========= (1) Import if App will be using the CurrentAccountService API==========//
 //==================================================================================
-import com.tradable.api.entities.Account;
-import com.tradable.api.services.account.AccountUpdateEvent;
 import com.tradable.api.services.account.CurrentAccountService;
-import com.tradable.api.services.account.CurrentAccountServiceListener;
 //====================================================================================
 //====================================================================================
 
@@ -91,6 +86,9 @@ import com.tradable.api.services.marketdata.QuoteTickEvent;
 import com.tradable.api.services.marketdata.QuoteTickListener;
 import com.tradable.api.services.marketdata.QuoteTickService;
 import com.tradable.api.services.marketdata.QuoteTickSubscription;
+import com.tradable.api.services.preferences.PreferenceKey;
+import com.tradable.api.services.preferences.PreferenceListener;
+import com.tradable.api.services.preferences.PreferenceService;
 //====================================================================================
 //====================================================================================
 
@@ -98,11 +96,9 @@ import com.tradable.api.services.marketdata.QuoteTickSubscription;
 //====================================================================================
 import com.tradable.api.entities.Order; //This is also used in (1) when listening 
 										//to activity on the user's account.
-import com.tradable.api.entities.Trade;
 import com.tradable.api.entities.Position;
 import com.tradable.api.entities.OrderDuration;
 import com.tradable.api.entities.OrderSide;
-import com.tradable.api.entities.OrderStatus;
 import com.tradable.api.entities.OrderType;
 import com.tradable.api.services.executor.TradingRequestExecutor;
 
@@ -110,9 +106,8 @@ import com.tradable.api.services.executor.TradingRequestExecutor;
 //====================================================================================
 //====================================================================================
 
-public class HtCreateNewPosition extends JPanel implements WorkspaceModule, 
-		CurrentAccountServiceListener, InstrumentServiceListener, 
-		QuoteTickListener, ActionListener{
+public class HtCreateNewPosition extends JPanel implements WorkspaceModule, InstrumentServiceListener, 
+		QuoteTickListener, ActionListener, PreferenceListener{
 	
 	//====================================================================================
 	//This a static final long object serialVersionUID variable has to be declared as 
@@ -123,26 +118,11 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule,
 	//That every instance of the class has the same serial number. 
 	//====================================================================================
 	private static final long serialVersionUID = 8426444465622687177L;
-
-	private static final Logger logger = LoggerFactory.getLogger(HtCreateNewPosition.class);
-	
+	private static final Logger logger = LoggerFactory.getLogger(HtCreateNewPosition.class);	
 	private static final String TITLE = "Rename me";
 
 	//========================================(1)========================================//
-	//Declaring CurrentAccountService object and Account object. The CurrentAccountService
-	//object will be set in the constructor (from our factory). We declare it here too, in
-	//order for it to be accessible in other methods and not just the constructor. We also
-	//declare an Account object which will be set whenever the account is reset. Such an
-	//event is said to occur whenever the Module starts up and whenever the user selects
-	//a different account to use. The accountId value is found once the Account object
-	//is instantiated. This also happens whenever the Account is reset, i.e. in this
-	//case, when a new Module's instantiation is open. The accountId is used for passing
-	//orders.
-	//==================================================================================	
-	CurrentAccountService accountSubscriptionService;
-	Account currentAccount;
-	private int accountId;
-	//==================================================================================	
+	private AccountRelatedClass accountRelatedObject;
 	//==================================================================================	
 	
 	//========================================(2)========================================//
@@ -161,7 +141,11 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule,
 	//==================================================================================	
 	//==================================================================================	
 	
+	private PreferenceService preferenceService;
 	private PlaceOrderClass placeOrderObject;
+	private Boolean oneClickEnabled = null;
+	private Boolean mulTracksEnabled = null;
+	private Boolean confirmedOrder = null;
 	
 	private JTextPane textPane;
 	private JButton btnNewButton;
@@ -173,7 +157,8 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule,
 	
 	public HtCreateNewPosition(TradingRequestExecutor executor, 
 			CurrentAccountService accountSubscriptionService, 
-			InstrumentService instrumentService, QuoteTickService quoteTickService) {
+			InstrumentService instrumentService, QuoteTickService quoteTickService,
+			PreferenceService preferenceService) {
 			
 		
 		//============= This code sets up the visual component of our Module==============//
@@ -216,13 +201,17 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule,
 		//====================================================================================	
 		//====================================================================================	
 		
-		
+		//setting all the values for used objects.
+		this.instrumentService = instrumentService;
+		this.quoteTickService = quoteTickService; 
+		this.preferenceService = preferenceService;
+		accountRelatedObject = new AccountRelatedClass(accountSubscriptionService, textPane);
+		placeOrderObject = new PlaceOrderClass(executor, logger);
 		
 		//========================================(1)========================================//
-		//the "this" object is a CurrentAccountServiceListener object too, so we can add listeners 
-		//this way. We also set the accountService object to the one Autowired in the factory 
-		this.accountSubscriptionService = accountSubscriptionService;
-		this.accountSubscriptionService.addListener(this);
+
+		
+		
 		//====================================================================================	
 		//====================================================================================	
 		
@@ -232,199 +221,22 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule,
 		//is the createSubscription() one. Then the subscription listens for the changes in the
 		//this object.
 		//====================================================================================	
-		this.instrumentService = instrumentService;
-		this.instrumentService.addListener(this);
-		this.quoteTickService = quoteTickService; 
-		subscription = quoteTickService.createSubscription();
+		
+		this.instrumentService.addListener(this);	
+		subscription = this.quoteTickService.createSubscription();
         subscription.setListener(this);  //num: subscription now listens to this (as I am implementing the quoteTickListener)
 		
         //========================================(3)========================================//
-
-		placeOrderObject = new PlaceOrderClass(executor, logger);
-		placeOrderObject.setAccountId(accountId);
+		placeOrderObject.setAccountId(accountRelatedObject.getAccountId());
+		this.preferenceService.addPreferenceListener(PreferenceKey.ONE_CLICK_TRADING_ENABLED, this);
+		this.preferenceService.addPreferenceListener(PreferenceKey.MULTIPLE_TRACKS_ENABLED, this);
+		oneClickEnabled = this.preferenceService.isOneClickTradingEnabled();
+		mulTracksEnabled = this.preferenceService.isMultipleTracksEnabled();
+		confirmedOrder = false;
         
 		clickRound = 0;
 		
-	}
-	
-	
-	 
-	
-	//========================================(1)========================================//
-	//Upon instantiation, the account will detect by default that it is reset. So isReet
-	//will return true. We therefore get the value for our currAccount Account object and
-	//from there our accountId which will be used to pass orders.
-	//We also recall that CurrentAccountServiceListener fires up an event whenever
-	//an order is placed, a trade takes place, and or a position changes. This method
-	//thus includes code that simply writes down whatever it sees happening in the textPane.
-	//We note that currentAccount is set on every event, as this is currently the only way
-	//to always have the latest information in the currentAccount object.
-	//====================================================================================	
-
-
-	@Override
-    public void accountUpdated(AccountUpdateEvent event) {
-	
-		currentAccount = accountSubscriptionService.getCurrentAccount();
-        if (event.isReset()) {
-    		accountId = currentAccount.getAccountId();
-
-        } 
-        else {
-        	
-            Collection<Order> myChangedOrders = event.getChangedOrders();
-            Collection<Trade> mychangedTrades = event.getChangedTrades();
-            Collection<Position> mychangedPositions = event.getChangedPositions();
-            
-            try {
-            
-                
-                for (Order order : myChangedOrders){
-                	
-                	if (order.getStatus() == OrderStatus.ACCEPTED){
-                		textPane.getDocument().insertString(textPane.getDocument().getLength() ,
-     					"Order for " + order.getQuantity() + " " + order.getInstrument().getSymbol()
-     					+ " accepted \n", null);
-     					break;
-                	}
-                	
-                	else if (order.getStatus() == OrderStatus.COMPLETED){
-                		textPane.getDocument().insertString(textPane.getDocument().getLength() ,
-                		"Order for " + order.getQuantity() + " " + order.getInstrument().getSymbol()
-                		+ " completed \n", null);
-        				break;
-                	}
-                	
-                	else if (order.getStatus() == OrderStatus.CANCELED){
-                		textPane.getDocument().insertString(textPane.getDocument().getLength() ,
-                		"Order for " + order.getQuantity() + " " + order.getInstrument().getSymbol()
-                		+ " canceled \n", null);
-        				break;
-                	}
-                	
-                	else if (order.getStatus() == OrderStatus.EXPIRED){
-                		textPane.getDocument().insertString(textPane.getDocument().getLength() ,
-                		"Order for " + order.getQuantity() + " " + order.getInstrument().getSymbol()
-                		+ " expired \n", null);
-        				break;
-                	}
-                	
-                	else if (order.getStatus() == OrderStatus.NEW){
-                		textPane.getDocument().insertString(textPane.getDocument().getLength() ,
-                		"Order for " + order.getQuantity() + " " + order.getInstrument().getSymbol()
-                		+ " new \n", null);
-        				break;
-                	}
-                	
-                	else if (order.getStatus() == OrderStatus.REJECTED){
-                		textPane.getDocument().insertString(textPane.getDocument().getLength() ,
-                		"Order for " + order.getQuantity() + " " + order.getInstrument().getSymbol()
-                		+ " rejected \n", null);
-        				break;
-                	}
-                	
-                	else if (order.getStatus() == OrderStatus.REPLACED){
-                		textPane.getDocument().insertString(textPane.getDocument().getLength() ,
-                		"Order for " + order.getQuantity() + " " + order.getInstrument().getSymbol()
-                		+ " replaced \n", null);
-        				break;
-                	}
-                	
-                	else if (order.getStatus() == OrderStatus.WAITING){
-                		textPane.getDocument().insertString(textPane.getDocument().getLength() ,
-                		"Order for " + order.getQuantity() + " " + order.getInstrument().getSymbol()
-                		+ " waiting \n", null);
-        				break;
-                	}
-                	
-                	else if (order.getStatus() == OrderStatus.WORKING){
-                		
-                		if (order.getType() == OrderType.LIMIT){
-    	            		textPane.getDocument().insertString(textPane.getDocument().getLength() ,
-    	    	            "Order for " + order.getQuantity() + " " + order.getInstrument().getSymbol()
-    	    	            + " limit order is working \n", null);
-    	    	            break;
-                		}
-                		
-                		else if (order.getType() == OrderType.MARKET){
-    	            		textPane.getDocument().insertString(textPane.getDocument().getLength() ,
-    	    	            "Order for " + order.getQuantity() + " " + order.getInstrument().getSymbol()
-    	    	            + " market order is working \n", null);
-    	    	            break;
-                		}
-                		
-                    	
-                		else{
-    	            		textPane.getDocument().insertString(textPane.getDocument().getLength() ,
-    	    	            "Order for " + order.getQuantity() + " " + order.getInstrument().getSymbol()
-    	    	            + " is working \n", null);
-    	            		break;
-                		}
-                			
-                	}
-                	
-                }
-                
-                
-                for (Trade trade : mychangedTrades){
-                	
-    				if (trade.getQuantity() > 0){
-    					textPane.getDocument().insertString(textPane.getCaretPosition() , 
-    							" You just went long " + trade.getQuantity() + " "
-    							+ trade.getInstrument().getSymbol() 
-    							+ " at the price of " + trade.getPrice() + "\n", null);
-    				}
-    				else if (trade.getQuantity() < 0){
-    					textPane.getDocument().insertString(textPane.getCaretPosition() , 
-    							" You just went short (" + Math.abs(trade.getQuantity()) + ") " 
-    							+ trade.getInstrument().getSymbol() 
-    							+ " at the price of " + trade.getPrice() + "\n", null);
-    				}
-    				else{
-    					textPane.getDocument().insertString(textPane.getCaretPosition() , 
-    							"You apparently traded nothing, this should never happen. This is a bug."
-    							+ "\n" , null);
-    				}
-        	
-            	
-                }
-                	
-                
-                for (Position position : mychangedPositions){
-                		
-
-    				if (position.getQuantity() > 0){
-    					textPane.getDocument().insertString(textPane.getCaretPosition() , 
-    							" You are now long " + position.getQuantity() + " " 
-    							+ position.getInstrument().getSymbol()+ "\n" , null);
-    				}
-    				else if (position.getQuantity() < 0){
-    					textPane.getDocument().insertString(textPane.getCaretPosition() ,
-    							" You are now short (" + Math.abs(position.getQuantity()) + ") " 
-    							+ position.getInstrument().getSymbol()+ "\n" , null);
-    				}
-    				else{
-    					textPane.getDocument().insertString(textPane.getCaretPosition() ,
-    							" You are now flat on " + position.getInstrument().getSymbol()
-    							+ "\n" , null);
-    				}
-                	            	
-                }
-                
-                
-    			textPane.getDocument().insertString(textPane.getCaretPosition() , "\n" , null);
-            
-    		} 
-            
-            catch (BadLocationException e) {
-    			e.printStackTrace();
-    		}   		
-
-        }       
-
-    }	
-    //====================================================================================
-    //====================================================================================		
+	}	
 	
 	
 	
@@ -489,159 +301,147 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule,
     //working orders, it selects the one to modify by checking both the instrument it uses and the 
 	//Quantity ordered.
 	//When clicked again, go to 1).
-    //
-    //placeOrder(..):
-    //Is an Overloaded method that allows a user to place either a Limit or a Market order.
-    //It uses the PlaceOrderActionBuilder class which lets us set the properties of the order we
-    //want to pass. Once all the properties are set, the method calls the build() method
-    //from the PlaceOrderActionBuilder class. This creates an order with the properties we just set.
-    //We then create our OrderActionRequest object that also uses our accountId information
-    //in order for the container to identify what account the trade has to be passed onto.
-    //The commandIdSeed that is used for the logfile.
-    //Now that our request object is created we execute using the executor object that was
-    //set in the constructor.
-    //
-    //modifyOrder(..):
-    //Is very similar to our PlaceOrder method. The main differences are that we pass 
-    //the order to modify as an argument of ModifyOrderActionBuilder (The order to modify
-    //can actually be set after the ModifyOrderActionBuilder object is created using the 
-    // setOrder(Order order) method.) and that we hard code the fact that the order is a
-    //Market order.
-    //
-    //requestExecuted(..):
-    //is just the overridden method from the TradingRequestExecutor interface. It simply
-    //obtains a trading response from the executor and returns whether the response was 
-    //a success or not in the log.
 	//====================================================================================	
 	
     
 	@Override
 	public void actionPerformed(ActionEvent arg0) {
 		
-
-		if (clickRound == 0){
-			Random randGen = new Random();
-			int randomIndex = randGen.nextInt(instrumentService.getInstruments().size()-1);
-			instrument = (Instrument) instrumentService.getInstruments().toArray()[randomIndex];
-			//instrument = instrumentService.getInstrument("EURUSD"); //used for testing on liquid instrument.
+		
+		try{
 			
-			try {
+			if (clickRound == 0){
+				Random randGen = new Random();
+				int randomIndex = randGen.nextInt(instrumentService.getInstruments().size()-1);
+				instrument = (Instrument) instrumentService.getInstruments().toArray()[randomIndex];
+				//instrument = instrumentService.getInstrument("EURUSD"); //used for testing on liquid instrument.
+				
+				
 				textPane.getDocument().insertString(textPane.getCaretPosition() , 
 						"Intrument set to: ." + instrument.getSymbol() + "\n" , null);
-			} catch (BadLocationException e) {
-				e.printStackTrace();
-			}
-			
+				
 
-			subscription.setSymbol(instrument.getSymbol());			
-            ask = subscription.getAsk(instrument.getSymbol());            
-            bid = subscription.getBid(instrument.getSymbol());
-            
-			try {
-	            bidTextfield.setText("currBid: " + String.valueOf(bid.getPrice()));	
-	            askTextField.setText("currAsk: " + String.valueOf(ask.getPrice()));
-
-			} catch (Exception e) {
+				subscription.setSymbol(instrument.getSymbol());			
+	            ask = subscription.getAsk(instrument.getSymbol());            
+	            bid = subscription.getBid(instrument.getSymbol());
+	            
 				try {
+		            bidTextfield.setText("currBid: " + String.valueOf(bid.getPrice()));	
+		            askTextField.setText("currAsk: " + String.valueOf(ask.getPrice()));
+
+				} catch (NullPointerException e) {
 					textPane.getDocument().insertString(textPane.getCaretPosition() , 
-							"Exception caught, symbol cannot be used at this time \n" + 
+							"NullPointerException caught, symbol cannot be used at this time " +
+							"because prices aren't being updated fast enough!\n\n" + 
 							"Click again to get prices for another symbol\n\n" , null);
-				} catch (BadLocationException ex) {
-					ex.printStackTrace();
-				}
-				e.printStackTrace();
-				return; //clickRound not incremented.
-			}
-			
-		}
-		
-		else if (clickRound == 1){
-			
-			placeOrderObject.placeOrder(instrument, OrderSide.SELL, OrderDuration.DAY, OrderType.MARKET, 2000.0); 
-
-		}
-		
-		else if (clickRound == 2){
-			//setting the limit price at a value that will not be filled (15 % below the current asking price)
-			placeOrderObject.placeOrder(instrument, OrderSide.BUY, OrderDuration.DAY, OrderType.LIMIT, 1000.0, 0.85*ask.getPrice()); 
-			
-		}
-		
-		else if (clickRound == 3){
-    		List<Order> workingOrders = getWorkingOrdersList();
-    		Order orderToModify = null;
-    		if (workingOrders == null){
-    			return; //there was an error, the order could not be found.
-    		}
-    		else{
-    			for(Order order : workingOrders){
-    				
-    				if((order.getInstrument().getSymbol().equals(instrument.getSymbol())) 
-    						&& (order.getQuantity() == 1000.0))
-    					orderToModify = order;
-    				
-    			}
-    		}
-
-    		placeOrderObject.modifyOrder(orderToModify, OrderDuration.DAY, 5000.0);
-			try {
-				textPane.getDocument().insertString(textPane.getCaretPosition() , 
-						"Order is being modified \n\n" , null);
-				
-			} catch (BadLocationException ex) {
-				ex.printStackTrace();
-			}
-			
-			
-		}
-		
-		else{
-			
-			//find a position you want to set an OCO order to.
-			//This code assumes a position long 3000 EURUSD was taken
-			//the current account. The position object is found that way
-			Position oCOPosition = null;
-			List<Position> positions = currentAccount.getPositions();
-			for (Position pos : positions){
-				if (pos.getInstrument().getSymbol().equals(instrument.getSymbol())
-						&& (pos.getQuantity() == 3000.0)){
-					oCOPosition = pos;
-				}
-				
-			}
-			
-			placeOrderObject.OCOOrder(oCOPosition, 0.98 * bid.getPrice(), 1.02 * ask.getPrice());
-			clickRound = 0;
-			return;
 					
+					e.printStackTrace();
+					return; //clickRound not incremented.
+				}
+				
+			}
+			
+			
+			else{
+				
+				
+				if(oneClickEnabled || confirmedOrder){
+					
+					if (clickRound == 1){
+						placeOrderObject.placeOrder(instrument, OrderSide.SELL, OrderDuration.DAY, OrderType.MARKET, 2000.0);
+					}
+					
+					else if (clickRound == 2){
+						//setting the limit price at a value that will not be filled (15 % below the current asking price)
+						placeOrderObject.placeOrder(instrument, OrderSide.BUY, OrderDuration.DAY, OrderType.LIMIT, 1000.0, 0.85*ask.getPrice()); 
+						
+					}
+					
+					else if (clickRound == 3){
+			    		List<Order> workingOrders = accountRelatedObject.getWorkingOrdersList();
+			    		Order orderToModify = null;
+			    		if (workingOrders == null){
+			    			return; //there was an error, the order could not be found.
+			    		}
+			    		else{
+			    			for(Order order : workingOrders){
+			    				
+			    				if((order.getInstrument().getSymbol().equals(instrument.getSymbol())) 
+			    						&& (order.getQuantity() == 1000.0))
+			    					orderToModify = order;
+			    				
+			    			}
+			    		}
+
+			    		placeOrderObject.modifyOrder(orderToModify, OrderDuration.DAY, 5000.0);
+			    		
+						textPane.getDocument().insertString(textPane.getCaretPosition() , 
+								"Order is being modified \n\n" , null);		
+						
+					}
+					
+					else{
+						
+						//find a position you want to set an OCO order to.
+						//This code assumes a position long 3000 EURUSD was taken
+						//the current account. The position object is found that way
+						Position oCOPosition = null;
+						List<Position> positions = accountRelatedObject.getCurrentAccount().getPositions();
+						for (Position pos : positions){
+							if (pos.getInstrument().getSymbol().equals(instrument.getSymbol())
+									&& (pos.getQuantity() == 3000.0)){
+								oCOPosition = pos;
+							}
+							
+						}
+						
+						placeOrderObject.OCOOrder(oCOPosition, 0.98 * bid.getPrice(), 1.02 * ask.getPrice());
+						clickRound = 0;
+						return;
+								
+					}
+					
+					
+					confirmedOrder = false;
+				}
+				else{
+					textPane.getDocument().insertString(textPane.getCaretPosition() , 
+						"One Click trading is disabled. Click again to confirm order.\n\n" , null);
+					
+					confirmedOrder = true;
+					return;
+				}
+				
+				
+			}
+			
+			
 		}
+		catch (BadLocationException e) {
+			e.printStackTrace();
+		}
+				
 		
 		++clickRound;
 	}
 	
 	
-	
-	public List<Order> getWorkingOrdersList(){
-
-		//to get the list of all working orders, I.e. orders that i can actually modify. 
-		List<Order> workingOrders = new ArrayList<Order>(); 
-		for (Order order : currentAccount.getOrders()){
-			if (order.getStatus() == OrderStatus.WORKING){
-				workingOrders.add(order);
-			}
-		}
-		
-		if (workingOrders.size() > 0) 
-			return workingOrders;
-		else
-			return null;
-	}
-	
     //====================================================================================
     //====================================================================================		
 
- 
 	
+
+	@Override
+	public void preferenceChanged(PreferenceKey preferenceKey, Object newValue) {
+		if (preferenceKey == PreferenceKey.ONE_CLICK_TRADING_ENABLED){
+			oneClickEnabled = (Boolean) newValue;
+			confirmedOrder = false;
+		}
+		else if (preferenceKey == PreferenceKey.MULTIPLE_TRACKS_ENABLED)
+			mulTracksEnabled = (Boolean) newValue;
+		else{}
+	}
+ 
 	
 	//====================================================================================
     //Don't forget to remove listeners. For the subscription object, the destroy() method
@@ -650,8 +450,9 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule,
 	@Override
 	public void destroy() {
 		
-		accountSubscriptionService.removeListener(this);
+		accountRelatedObject.destroy();
 		instrumentService.removeListener(this);
+		preferenceService.removePreferenceListener(this);
 		subscription.destroy();
 	}
 

@@ -20,6 +20,30 @@ import com.tradable.api.services.executor.TradingResponse;
 import com.tradable.api.services.executor.groups.CreateOCOGroupRequestBuilder;
 import com.tradable.api.services.executor.groups.OrderGroupRequest;
 
+
+//placeOrder(..):
+//Is an Overloaded method that allows a user to place either a Limit or a Market order.
+//It uses the PlaceOrderActionBuilder class which lets us set the properties of the order we
+//want to pass. Once all the properties are set, the method calls the build() method
+//from the PlaceOrderActionBuilder class. This creates an order with the properties we just set.
+//We then create our OrderActionRequest object that also uses our accountId information
+//in order for the container to identify what account the trade has to be passed onto.
+//The commandIdSeed that is used for the logfile.
+//Now that our request object is created we execute using the executor object that was
+//set in the constructor.
+//
+//modifyOrder(..):
+//Is very similar to our PlaceOrder method. The main differences are that we pass 
+//the order to modify as an argument of ModifyOrderActionBuilder (The order to modify
+//can actually be set after the ModifyOrderActionBuilder object is created using the 
+// setOrder(Order order) method.) and that we hard code the fact that the order is a
+//Market order.
+//
+//requestExecuted(..):
+//is just the overridden method from the TradingRequestExecutor interface. It simply
+//obtains a trading response from the executor and returns whether the response was 
+//a success or not in the log.
+
 public class PlaceOrderClass implements TradingRequestListener{
 	
 	//========================================(3)========================================//
@@ -44,10 +68,13 @@ public class PlaceOrderClass implements TradingRequestListener{
 		this.logger = logger;
 	}
 	
+	
+	
 	public void setAccountId(int accountId){
 		this.accountId = accountId;
 	}
 
+	
 	public void placeOrder(Instrument instrument, OrderSide orderSide, OrderDuration orderDuration, 
 			OrderType orderType, Double quantity){
 		placeOrder(instrument, orderSide, orderDuration, orderType, quantity, 0.0);

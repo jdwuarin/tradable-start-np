@@ -59,6 +59,7 @@ import com.tradable.api.services.account.CurrentAccountService;
 //We also import QuoteTickService to use a live feed of the markets prices.
 import com.tradable.api.services.instrument.InstrumentService;
 import com.tradable.api.services.marketdata.QuoteTickService;
+import com.tradable.api.services.preferences.PreferenceService;
 
 
 //========= (3) Import if App will be using the TradingRequestExecutor API==========//
@@ -107,6 +108,9 @@ public class HtCreateNewPositionFactory implements WorkspaceModuleFactory{
 	//====================================================================================
 	//====================================================================================
 	
+	@Autowired
+	private PreferenceService preferenceService;
+	
 	
 	//== (0) just the 4 interfaces that have to be implemented as per our component API=//
 	//====================================================================================
@@ -115,7 +119,7 @@ public class HtCreateNewPositionFactory implements WorkspaceModuleFactory{
 	public WorkspaceModule createModule() {
 
 		return new HtCreateNewPosition(executor, accountSubscriptionService, 
-				instrumentService, quoteTickService);
+				instrumentService, quoteTickService, preferenceService);
 	}
 
 	@Override
