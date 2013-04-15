@@ -49,6 +49,13 @@ public class AccountRelatedClass implements CurrentAccountServiceListener {
 		
 	}
 	
+	public void destroy() {
+		
+		accountSubscriptionService.removeListener(this);
+
+	}
+	
+	
 	public int getAccountId(){
 		return accountId;
 	}
@@ -251,12 +258,5 @@ public class AccountRelatedClass implements CurrentAccountServiceListener {
 		else
 			return null;
 	}
-	
-	public void destroy() {
-		
-		accountSubscriptionService.removeListener(this);
-
-	}
-	
 
 }

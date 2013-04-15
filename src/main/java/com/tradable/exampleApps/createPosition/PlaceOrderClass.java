@@ -120,12 +120,13 @@ public class PlaceOrderClass implements TradingRequestListener{
 	//their behavior can be somewhat unexpected although it will seem to work most of the
 	//time when the market is open.
 	//==================================================================================//
-	public void modifyOrder(Order orderToModify, OrderDuration orderDuration, Double quantity){
+	public void modifyOrder(Order orderToModify, OrderDuration orderDuration, Double quantity, 
+			Double limitPrice){
 		
 		
 		ModifyOrderActionBuilder orderActionBuilder = new ModifyOrderActionBuilder(orderToModify);
 		orderActionBuilder.setOrderType(OrderType.LIMIT);
-		orderActionBuilder.setLimitPrice(1.01* HtCreateNewPosition.ask.getPrice()); //setting ask price to get filled almost surely
+		orderActionBuilder.setLimitPrice(limitPrice);//setting ask price to get filled almost surely
 	    orderActionBuilder.setDuration(orderDuration);
 	    orderActionBuilder.setQuantity(quantity);
 

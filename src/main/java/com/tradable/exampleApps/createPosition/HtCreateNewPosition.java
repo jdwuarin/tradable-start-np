@@ -106,8 +106,7 @@ import com.tradable.api.services.executor.TradingRequestExecutor;
 //====================================================================================
 //====================================================================================
 
-public class HtCreateNewPosition extends JPanel implements WorkspaceModule, InstrumentServiceListener, 
-		QuoteTickListener, ActionListener, PreferenceListener{
+public class HtCreateNewPosition extends JPanel implements WorkspaceModule, ActionListener, PreferenceListener{
 	
 	//====================================================================================
 	//This a static final long object serialVersionUID variable has to be declared as 
@@ -126,30 +125,19 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule, Inst
 	//==================================================================================	
 	
 	//========================================(2)========================================//
-	//We here declare the objects that will be used for for monitoring the user account's
-	//instruments and for monitoring the bid and ask prices of an instrument once we have
-	//subscribed to listening to changes in it.
-	//The two Quote objects will be used once an instrument is identified to update and
-	//display the latest bid and ask prices.
-	//==================================================================================
-	private InstrumentService instrumentService;
-	private Instrument instrument;
-	private QuoteTickService quoteTickService;
-	private QuoteTickSubscription subscription;
-	public static Quote bid;
-	public static Quote ask;
-	//==================================================================================	
+	private InstrumentAndMarketData dataObject;
 	//==================================================================================	
 	
-	private PreferenceService preferenceService;
 	private PlaceOrderClass placeOrderObject;
+	
+	private PreferenceService preferenceService;
 	private Boolean oneClickEnabled = null;
 	private Boolean mulTracksEnabled = null;
 	private Boolean confirmedOrder = null;
 	
 	private JTextPane textPane;
 	private JButton btnNewButton;
-	final JTextField bidTextfield;
+	final JTextField bidTextField;
 	final JTextField askTextField;
 
 	
@@ -170,10 +158,10 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule, Inst
 		putClientProperty(WorkspaceModuleProperties.COMPONENT_RESIZE_ENABLED, false);
 		
 		//used for printing the quotes
-		bidTextfield = new JTextField();
-		bidTextfield.setEditable(false);
-		bidTextfield.setBounds(40, 70, 140, 30);
-		add(bidTextfield);
+		bidTextField = new JTextField();
+		bidTextField.setEditable(false);
+		bidTextField.setBounds(40, 70, 140, 30);
+		add(bidTextField);
 		askTextField = new JTextField();
 		askTextField.setEditable(false);
 		askTextField.setBounds(220, 70, 140, 30);
@@ -192,7 +180,7 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule, Inst
 		
 		
 		//used for the button to allow the user to set instruments and pass orders.
-		JButton btnNewButton = new JButton("Click Me");
+		btnNewButton = new JButton("Click Me");
 		btnNewButton.addActionListener(this); //we note we have to add an action listener here.
 		btnNewButton.setBounds(150, 20, 100, 30);
 		add(btnNewButton);	
@@ -202,30 +190,21 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule, Inst
 		//====================================================================================	
 		
 		//setting all the values for used objects.
-		this.instrumentService = instrumentService;
-		this.quoteTickService = quoteTickService; 
-		this.preferenceService = preferenceService;
+
+		dataObject = new InstrumentAndMarketData(instrumentService, quoteTickService, 
+			bidTextField, askTextField);
 		accountRelatedObject = new AccountRelatedClass(accountSubscriptionService, textPane);
 		placeOrderObject = new PlaceOrderClass(executor, logger);
-		
+		this.preferenceService = preferenceService;
 		//========================================(1)========================================//
-
-		
-		
-		//====================================================================================	
+		//
 		//====================================================================================	
 		
 		//========================================(2)========================================//
 		//
-		//We note, for the QuoteTickService interface, the only available method to its objects
-		//is the createSubscription() one. Then the subscription listens for the changes in the
-		//this object.
 		//====================================================================================	
 		
-		this.instrumentService.addListener(this);	
-		subscription = this.quoteTickService.createSubscription();
-        subscription.setListener(this);  //num: subscription now listens to this (as I am implementing the quoteTickListener)
-		
+
         //========================================(3)========================================//
 		placeOrderObject.setAccountId(accountRelatedObject.getAccountId());
 		this.preferenceService.addPreferenceListener(PreferenceKey.ONE_CLICK_TRADING_ENABLED, this);
@@ -237,38 +216,6 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule, Inst
 		clickRound = 0;
 		
 	}	
-	
-	
-	
-	
-	//========================================(2)========================================//
-	//Remember that instrument events occur only when the user switches session accounts
-	//or when the list is changed. This will almost never happen while you are running this
-	//example, so no need to implement this method.
-	//====================================================================================	
-
-    @Override
-    //this will happen once the account is loaded
-    public void instrumentsUpdated(InstrumentUpdateEvent event) { 
-        
-    }
-    
-	@Override
-	public void quotesUpdated(QuoteTickEvent event) {
-		
-		//Quote objects have to be updated in order to get the correct
-		//current prices. Not the subscription object is updated by the
-		//container, thus the only way to update the Quote objects is to use it
-        ask = subscription.getAsk(instrument.getSymbol());
-        bid = subscription.getBid(instrument.getSymbol());
-
-		bidTextfield.setText("currBid: " + String.valueOf(bid.getPrice()));	
-		askTextField.setText("currAsk: " + String.valueOf(ask.getPrice()));     
-		
-	}
-    //====================================================================================
-    //====================================================================================	
-    
     
     
     
@@ -312,22 +259,22 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule, Inst
 			
 			if (clickRound == 0){
 				Random randGen = new Random();
-				int randomIndex = randGen.nextInt(instrumentService.getInstruments().size()-1);
-				instrument = (Instrument) instrumentService.getInstruments().toArray()[randomIndex];
+				int randomIndex = randGen.nextInt(dataObject.getAccountInstruments().size()-1);
+				dataObject.setCurrentInstrument((Instrument) 
+						dataObject.getAccountInstruments().toArray()[randomIndex]);
 				//instrument = instrumentService.getInstrument("EURUSD"); //used for testing on liquid instrument.
 				
 				
 				textPane.getDocument().insertString(textPane.getCaretPosition() , 
-						"Intrument set to: ." + instrument.getSymbol() + "\n" , null);
+						"Intrument set to: ." + dataObject.getCurrentInstrument().getSymbol() + "\n" , null);
 				
 
-				subscription.setSymbol(instrument.getSymbol());			
-	            ask = subscription.getAsk(instrument.getSymbol());            
-	            bid = subscription.getBid(instrument.getSymbol());
+				dataObject.setCurrentTickSubscriptionSymbol();
+				dataObject.setCurrentQuotes();
 	            
 				try {
-		            bidTextfield.setText("currBid: " + String.valueOf(bid.getPrice()));	
-		            askTextField.setText("currAsk: " + String.valueOf(ask.getPrice()));
+		            bidTextField.setText("currBid: " + String.valueOf(dataObject.getCurrentBid().getPrice()));	
+		            askTextField.setText("currAsk: " + String.valueOf(dataObject.getCurrentAsk().getPrice()));
 
 				} catch (NullPointerException e) {
 					textPane.getDocument().insertString(textPane.getCaretPosition() , 
@@ -348,13 +295,15 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule, Inst
 				if(oneClickEnabled || confirmedOrder){
 					
 					if (clickRound == 1){
-						placeOrderObject.placeOrder(instrument, OrderSide.SELL, OrderDuration.DAY, OrderType.MARKET, 2000.0);
+						placeOrderObject.placeOrder(dataObject.getCurrentInstrument(), 
+								OrderSide.SELL, OrderDuration.DAY, OrderType.MARKET, 2000.0);
 					}
 					
 					else if (clickRound == 2){
 						//setting the limit price at a value that will not be filled (15 % below the current asking price)
-						placeOrderObject.placeOrder(instrument, OrderSide.BUY, OrderDuration.DAY, OrderType.LIMIT, 1000.0, 0.85*ask.getPrice()); 
-						
+						placeOrderObject.placeOrder(dataObject.getCurrentInstrument(), OrderSide.BUY, 
+								OrderDuration.DAY, OrderType.LIMIT, 1000.0, 0.85*dataObject.getCurrentAsk().getPrice());
+
 					}
 					
 					else if (clickRound == 3){
@@ -366,14 +315,15 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule, Inst
 			    		else{
 			    			for(Order order : workingOrders){
 			    				
-			    				if((order.getInstrument().getSymbol().equals(instrument.getSymbol())) 
+			    				if((order.getInstrument().getSymbol().equals(dataObject.getCurrentInstrument().getSymbol())) 
 			    						&& (order.getQuantity() == 1000.0))
 			    					orderToModify = order;
 			    				
 			    			}
 			    		}
 
-			    		placeOrderObject.modifyOrder(orderToModify, OrderDuration.DAY, 5000.0);
+			    		placeOrderObject.modifyOrder(orderToModify, OrderDuration.DAY, 5000.0, 
+			    				1.01* dataObject.getCurrentAsk().getPrice());
 			    		
 						textPane.getDocument().insertString(textPane.getCaretPosition() , 
 								"Order is being modified \n\n" , null);		
@@ -388,14 +338,15 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule, Inst
 						Position oCOPosition = null;
 						List<Position> positions = accountRelatedObject.getCurrentAccount().getPositions();
 						for (Position pos : positions){
-							if (pos.getInstrument().getSymbol().equals(instrument.getSymbol())
+							if (pos.getInstrument().getSymbol().equals(dataObject.getCurrentInstrument().getSymbol())
 									&& (pos.getQuantity() == 3000.0)){
 								oCOPosition = pos;
 							}
 							
 						}
 						
-						placeOrderObject.OCOOrder(oCOPosition, 0.98 * bid.getPrice(), 1.02 * ask.getPrice());
+						placeOrderObject.OCOOrder(oCOPosition, 0.98 * dataObject.getCurrentBid().getPrice(), 
+								1.02 * dataObject.getCurrentAsk().getPrice());
 						clickRound = 0;
 						return;
 								
@@ -403,7 +354,7 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule, Inst
 					
 					
 					confirmedOrder = false;
-				}
+				}//end if(oneClickEnabled....)
 				else{
 					textPane.getDocument().insertString(textPane.getCaretPosition() , 
 						"One Click trading is disabled. Click again to confirm order.\n\n" , null);
@@ -451,9 +402,8 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule, Inst
 	public void destroy() {
 		
 		accountRelatedObject.destroy();
-		instrumentService.removeListener(this);
 		preferenceService.removePreferenceListener(this);
-		subscription.destroy();
+		dataObject.destroy();
 	}
 
 	@Override
@@ -472,5 +422,6 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule, Inst
 		// TODO Auto-generated method stub
 		
 	}
+
 
 }
