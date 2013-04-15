@@ -33,7 +33,7 @@
  *************************************************************************************/
 
 
-package com.tradable.exampleApps.createPosition;
+package com.tradable.exampleApps.TradableStartNp;
 
 //= These libraries are imported either for the graphics component or for standard utility=//
 //====================================================================================
@@ -106,18 +106,18 @@ import com.tradable.api.services.executor.TradingRequestExecutor;
 //====================================================================================
 //====================================================================================
 
-public class HtCreateNewPosition extends JPanel implements WorkspaceModule, ActionListener, PreferenceListener{
+public class TradableStartNpModule extends JPanel implements WorkspaceModule, ActionListener, PreferenceListener{
 	
 	//====================================================================================
 	//This a static final long object serialVersionUID variable has to be declared as 
-	//the HtCreateNewPosition class is a serializable class. Once an object is serialized
+	//the TradableStartNpModule class is a serializable class. Once an object is serialized
 	//(i.e. it is converted to physical memory), the deserialization process will use this
-	//number to make sure the obtained object (object creaed from the deserialization 
-	//pprcess) is effectively of this class. If not, an InvalidClassException is thrown.
-	//That every instance of the class has the same serial number. 
+	//number to make sure the obtained object (object created from the deserialization 
+	//process) is effectively of this class. If not, an InvalidClassException is thrown.
+	//This is used if your class uses the Persistable interfaces. 
 	//====================================================================================
 	private static final long serialVersionUID = 8426444465622687177L;
-	private static final Logger logger = LoggerFactory.getLogger(HtCreateNewPosition.class);	
+	private static final Logger logger = LoggerFactory.getLogger(TradableStartNpModule.class);	
 	private static final String TITLE = "Rename me";
 
 	//========================================(1)========================================//
@@ -143,7 +143,7 @@ public class HtCreateNewPosition extends JPanel implements WorkspaceModule, Acti
 	
 	static int clickRound;
 	
-	public HtCreateNewPosition(TradingRequestExecutor executor, 
+	public TradableStartNpModule(TradingRequestExecutor executor, 
 			CurrentAccountService accountSubscriptionService, 
 			InstrumentService instrumentService, QuoteTickService quoteTickService,
 			PreferenceService preferenceService) {

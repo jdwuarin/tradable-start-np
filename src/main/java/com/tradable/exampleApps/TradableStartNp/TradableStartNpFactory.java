@@ -33,7 +33,7 @@
  *  code, please go to: https://github.com/john-dwuarin/tradable-start-np
  *************************************************************************************/
 
-package com.tradable.exampleApps.createPosition;
+package com.tradable.exampleApps.TradableStartNp;
 
 //==Will be imported in most of your apps in order to use the @Autowired notation==//
 
@@ -69,7 +69,7 @@ import com.tradable.api.services.executor.TradingRequestExecutor;
 
 
 
-public class HtCreateNewPositionFactory implements WorkspaceModuleFactory{
+public class TradableStartNpFactory implements WorkspaceModuleFactory{
 
 	//========= (1) CurrentAccountService object has to be instantiated here.==========//
 	//The container or "application context" injects an instance of CurrentAccountService 
@@ -118,7 +118,7 @@ public class HtCreateNewPositionFactory implements WorkspaceModuleFactory{
 	@Override
 	public WorkspaceModule createModule() {
 
-		return new HtCreateNewPosition(executor, accountSubscriptionService, 
+		return new TradableStartNpModule(executor, accountSubscriptionService, 
 				instrumentService, quoteTickService, preferenceService);
 	}
 
@@ -129,14 +129,14 @@ public class HtCreateNewPositionFactory implements WorkspaceModuleFactory{
 
 	@Override
 	public String getDisplayName() {
-		
-		return "How-To Create New Position";
+		//rename me
+		return "tradable-start-np";
 	}
 
 	@Override
 	public String getFactoryId() {
 		//don't forget to change me!!!
-		return "com.tradable.HtCreateNewPosition";
+		return "com.tradable.exampleApps.TradableStartNp";
 	}
 	
 	//====================================================================================
