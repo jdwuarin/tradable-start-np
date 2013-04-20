@@ -180,7 +180,7 @@ public class TradableStartNpModule extends JPanel implements WorkspaceModule, Ac
 		
 		
 		//used for the button to allow the user to set instruments and pass orders.
-		btnNewButton = new JButton("Click Me");
+		btnNewButton = new JButton("Click Me 0");
 		btnNewButton.addActionListener(this); //we note we have to add an action listener here.
 		btnNewButton.setBounds(150, 20, 100, 30);
 		add(btnNewButton);	
@@ -266,7 +266,7 @@ public class TradableStartNpModule extends JPanel implements WorkspaceModule, Ac
 				
 				
 				textPane.getDocument().insertString(textPane.getCaretPosition() , 
-						"Intrument set to: ." + dataObject.getCurrentInstrument().getSymbol() + "\n" , null);
+						"Intrument set to: " + dataObject.getCurrentInstrument().getSymbol() + "\n" , null);
 				
 
 				dataObject.setCurrentTickSubscriptionSymbol();
@@ -297,6 +297,9 @@ public class TradableStartNpModule extends JPanel implements WorkspaceModule, Ac
 					if (clickRound == 1){
 						placeOrderObject.placeOrder(dataObject.getCurrentInstrument(), 
 								OrderSide.SELL, OrderDuration.DAY, OrderType.MARKET, 2000.0);
+						
+						int something = 2;
+						int none = something;
 					}
 					
 					else if (clickRound == 2){
@@ -348,6 +351,7 @@ public class TradableStartNpModule extends JPanel implements WorkspaceModule, Ac
 						placeOrderObject.OCOOrder(oCOPosition, 0.98 * dataObject.getCurrentBid().getPrice(), 
 								1.02 * dataObject.getCurrentAsk().getPrice());
 						clickRound = 0;
+						this.btnNewButton.setText("Click Me " + String.valueOf(clickRound));
 						return;
 								
 					}
@@ -374,6 +378,7 @@ public class TradableStartNpModule extends JPanel implements WorkspaceModule, Ac
 				
 		
 		++clickRound;
+		this.btnNewButton.setText("Click Me " + String.valueOf(clickRound));
 	}
 	
 	

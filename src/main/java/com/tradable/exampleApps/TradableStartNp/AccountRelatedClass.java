@@ -46,6 +46,8 @@ public class AccountRelatedClass implements CurrentAccountServiceListener {
 		
 		this.accountSubscriptionService = accountSubscriptionService;
 		this.accountSubscriptionService.addListener(this);
+		currentAccount = accountSubscriptionService.getCurrentAccount();
+		accountId = currentAccount.getAccountId();
 		
 	}
 	
@@ -139,6 +141,7 @@ public class AccountRelatedClass implements CurrentAccountServiceListener {
         				break;
                 	}
                 	
+                	
                 	else if (order.getStatus() == OrderStatus.REPLACED){
                 		textPane.getDocument().insertString(textPane.getDocument().getLength() ,
                 		"Order for " + order.getQuantity() + " " + order.getInstrument().getSymbol()
@@ -169,6 +172,12 @@ public class AccountRelatedClass implements CurrentAccountServiceListener {
     	    	            break;
                 		}
                 		
+                		else if (order.getType() == OrderType.STOP){
+    	            		textPane.getDocument().insertString(textPane.getDocument().getLength() ,
+    	    	            "Order for " + order.getQuantity() + " " + order.getInstrument().getSymbol()
+    	    	            + " stop order is working \n", null);
+    	    	            break;
+                		}
                     	
                 		else{
     	            		textPane.getDocument().insertString(textPane.getDocument().getLength() ,
